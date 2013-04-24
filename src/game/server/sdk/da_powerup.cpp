@@ -34,14 +34,12 @@ public:
 	void manifest (void);
 public:
 	float mindelay, maxdelay;
-	int typemask;
 	unsigned short index;
 	unsigned char numtypes;
 	unsigned char types[MAX_POWERUP];
 };
 LINK_ENTITY_TO_CLASS(da_powerup, Powerup);
 BEGIN_DATADESC(Powerup)
-	DEFINE_KEYFIELD(typemask, FIELD_INTEGER, "typemask"),
 	DEFINE_KEYFIELD(mindelay, FIELD_FLOAT, "mindelay"),
 	DEFINE_KEYFIELD(maxdelay, FIELD_FLOAT, "maxdelay"),
 	DEFINE_ENTITYFUNC(pickup),
@@ -51,13 +49,22 @@ END_DATADESC()
 void 
 Powerup::Precache (void)
 {
-	int i;
-	for (i = 0; i < MAX_POWERUP; i++)
-	{
-		if (typemask&(1<<i))
+	numtypes = 0;
+	if (!HasSpawnFlags (~0))
+	{/*Randomly select a powerup to spawn for the duration of the game*/
+		types[numtypes++] = RandomInt (0, MAX_POWERUP-1);
+		PrecacheModel (models[types[0]]);
+	}
+	else
+	{/*Precache everything set in the bitmask*/
+		int i;
+		for (i = 0; i < MAX_POWERUP; i++)
 		{
-			PrecacheModel (models[i]);
-			types[numtypes++] = i;
+			if (HasSpawnFlags (1<<i))
+			{
+				PrecacheModel (models[i]);
+				types[numtypes++] = i;
+			}
 		}
 	}
 }
@@ -74,7 +81,7 @@ Powerup::manifest (void)
 	SetModel (models[types[index]]);
 	RemoveEffects (EF_NODRAW);
 	SetSolid (SOLID_BBOX);
-	AddSolidFlags (FSOLID_TRIGGER);
+	AddSolidFlags (FSOLID_TRIGGER|FSOLID_NOT_SOLID);
 	SetMoveType (MOVETYPE_NONE);
 	UTIL_SetSize (this, -Vector (32,32,32), Vector (32,32,32));
 
@@ -102,7 +109,7 @@ Powerup::pickup (CBaseEntity *other)
 	}
 	/*Everyone is cool but also, somewhat parodoxically, of low selfesteem.
 	So don't rub it in their face that they were denied.
-	Reward the taker though.*/
+	Still reward the taker though.*/
 	denied = 0;
 	taker = (CSDKPlayer *)other;
 	VectorCopy (GetAbsOrigin (), pos);
@@ -120,7 +127,7 @@ Powerup::pickup (CBaseEntity *other)
 			AngleVectors (loser->EyeAngles (), &forward);
 			VectorSubtract (loser->GetAbsOrigin (), pos, org);
 			VectorNormalize (org);
-			if (fabs (DotProduct (forward, org)) < 0.7)
+			if (DotProduct (forward, org) < 0)
 			{
 				denied++;
 				break;
@@ -128,7 +135,7 @@ Powerup::pickup (CBaseEntity *other)
 		}
 	}
 	if (len != 1) 
-	{/*I don't know what's happening here*/
+	{/*I don't know what's happening here, why is this so complicated?*/
 		taker->AddStylePoints (3*denied, STYLE_POINT_STYLISH);
 		taker->SendAnnouncement (ANNOUNCEMENT_COOL, STYLE_POINT_STYLISH);
 	}
@@ -144,7 +151,7 @@ Powerup::pickup (CBaseEntity *other)
 	case POWERUP_STYLEFILL:
 	{
 		ConVarRef activation ("dab_stylemeteractivationcost");
-		float pts = da_powerup_style.GetFloat ()*activation.GetFloat ();
+		float pts = 1+da_powerup_style.GetFloat ()*activation.GetFloat ();
 		taker->AddStylePoints (pts, STYLE_POINT_STYLISH);
 		break;
 	}
@@ -170,6 +177,7 @@ Powerup::pickup (CBaseEntity *other)
 	SetThink (&Powerup::manifest);
 	SetNextThink (gpGlobals->curtime + RandomFloat (mindelay, maxdelay));
 }
+#ifdef DEBUG
 void powerup(const CCommand &args)
 {
 	CBasePlayer *player = ToBasePlayer (UTIL_GetCommandClient ()); 
@@ -184,10 +192,11 @@ void powerup(const CCommand &args)
 	VectorMA (player->GetAbsOrigin () + Vector (0, 0, 36), 80, forward, org);
 
 	Powerup *p = (Powerup *)CreateEntityByName ("da_powerup");
-	p->typemask = 0xFFFF;
+	p->AddSpawnFlags (~0);
 	p->mindelay = 5;
 	p->maxdelay = 10;
 	p->Spawn ();
 	p->SetAbsOrigin (org);
 }
 static ConCommand test_powerup ("test_powerup", powerup);
+#endif
