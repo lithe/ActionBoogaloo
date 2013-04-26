@@ -3,8 +3,8 @@
 
 ConVar  da_powerup_health ("da_powerup_health", "100", FCVAR_NOTIFY|FCVAR_REPLICATED);
 ConVar  da_powerup_style ("da_powerup_style", "1", FCVAR_NOTIFY|FCVAR_REPLICATED);
-ConVar  da_powerup_magazine ("da_powerup_magazine", "3", FCVAR_NOTIFY|FCVAR_REPLICATED);
-ConVar  da_powerup_slowmo ("da_powerup_slowmo", "5", FCVAR_NOTIFY|FCVAR_REPLICATED);
+ConVar  da_powerup_magazine ("da_powerup_magazine", "2", FCVAR_NOTIFY|FCVAR_REPLICATED);
+ConVar  da_powerup_slowmo ("da_powerup_slowmo", "3", FCVAR_NOTIFY|FCVAR_REPLICATED);
 enum powerup_e
 {
 	POWERUP_HEALTH = 0,
